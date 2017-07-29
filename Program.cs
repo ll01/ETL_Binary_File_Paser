@@ -17,7 +17,8 @@ namespace openfile
 	{
 		class DataBaseSettings
 		{
-
+			const int white = 255;
+			const int image_offset = 16;
 			private int m_offsetinbytes;
 			private int m_recordsizeinbytes;
 			private int m_image_width;
@@ -69,7 +70,86 @@ namespace openfile
 						break;
 
 				}
-				return Lable; 
+				return Lable;
+			}
+
+			public void ExtractDataset(string FolderPath, string saveFolderPath, bool tocrop)
+			{
+
+
+				//var FileStream = File.Open(@"D:\Datasets\ETL9G_06", FileMode.Open);
+				//var FileStream = File.Open(@"D:\Downloads\ETL1\ETL1\ETL1C_01", FileMode.Open);
+				byte[] bytedata = new byte[Recordsizeinbytes];
+
+
+				List<string> lables = new List<string>();
+				//read file into byte array offseting 33 (for the meta data)
+
+				foreach (var currentFile in Directory.GetFiles(FolderPath).Where(x => System.Text.RegularExpressions.Regex.IsMatch(Path.GetFileName(x), "(_[0-9][0-9])$")))
+					try
+					{
+
+						var FileStream = File.Open(currentFile, FileMode.Open);
+						//convert to bitarray since the colours are stored as  4 bit collour depth
+						for (int recordCount = 0; recordCount < FileStream.Length / Recordsizeinbytes; recordCount++)
+						{
+							var currentRecordIndex = ((Recordsizeinbytes + Offsetinbytes) * recordCount);
+							FileStream.Seek(Metadataoffsetinbytes + currentRecordIndex, SeekOrigin.Begin);
+							FileStream.Read(bytedata, 0, bytedata.Length);
+							Bitmap image = new Bitmap(Image_width, Image_hight);
+
+							string Lable = null;
+							string Lable_Clean = null;
+							int i = 0;
+							byte[] labelByte = new byte[Lablesizeinbytes];
+							//ofsett to read lable 
+							FileStream.Seek(Lableoffset + currentRecordIndex, SeekOrigin.Begin);
+							FileStream.Read(labelByte, 0, labelByte.Length);
+							//Lable = System.Text.Encoding.ASCII.GetString(labelByte).Trim();
+							Lable = getLable(labelByte);
+							Lable_Clean = CleanFileName(Lable);
+
+							for (int y = 0; y < image.Height; y++)
+							{
+								for (int x = 0; x < image.Width; x += 2)
+								{
+
+
+									var byteNibbles = ConvertByteToNibbles(bytedata[i]);
+									// we multiply by 16 because the colour deaps in the package is 16 and bitmap is 256 per channel  256 /16 = 16
+									int lowNibble = white - (byteNibbles.lowNibble * ColourLevels);
+									//high nibble
+									int highNibble = white - (byteNibbles.highNibble * ColourLevels);
+									Color currentColour = Color.FromArgb(lowNibble, lowNibble, lowNibble);
+									image.SetPixel(x, y, currentColour);
+
+									currentColour = Color.FromArgb(highNibble, highNibble, highNibble);
+									image.SetPixel(x + 1, y, currentColour);
+									i++;
+								}
+							}
+							var newdirectory = Directory.CreateDirectory(saveFolderPath + "/img/" + Lable_Clean);
+							if (tocrop == true)
+							{
+
+								var cropArea = new Rectangle(image_offset, image_offset, 96, 96);
+								image.Clone(cropArea, image.PixelFormat).Save(newdirectory.FullName + "\\Dataset" + Path.GetFileName(currentFile) + "- " + recordCount + ".jpg", ImageFormat.Jpeg);
+							}
+							else
+							{
+								image.Save(newdirectory.FullName + "\\Dataset" + Path.GetFileName(currentFile) + "- " + recordCount + ".jpg", ImageFormat.Jpeg);
+
+							}
+
+						}
+					}
+
+					catch (Exception e)
+					{
+						Console.WriteLine(e);
+						Console.WriteLine("error in " + currentFile);
+						continue;
+					}
 			}
 
 		}
@@ -90,55 +170,9 @@ namespace openfile
 			var db9 = new DataBaseSettings(7, 8192, 128, 127, 64, 2, 2, Encoding.GetEncoding("EUC-JP"), 4);
 			const int white = 255;
 
-
-			var FileStream = File.Open(@"C:\Users\enti2\Desktop\Datasets\ETL9G_01", FileMode.Open);
-			//var FileStream = File.Open(@"D:\Downloads\ETL1\ETL1\ETL1C_01", FileMode.Open);
-			byte[] bytedata = new byte[db9.Recordsizeinbytes];
+			db9.ExtractDataset(@"D:\Datasets\ETL9G", @"D:\Datasets\ETL9G", true);
 
 
-			List<string> lables = new List<string>();
-			//read file into byte array offseting 33 (for the meta data)
-
-			//convert to bitarray since the colours are stored as  4 bit collour depth
-			for (int recordCount = 0; recordCount < FileStream.Length / db9.Recordsizeinbytes; recordCount++)
-			{
-				var currentRecordIndex = ((db9.Recordsizeinbytes + db9.Offsetinbytes) * recordCount);
-				FileStream.Seek(db9.Metadataoffsetinbytes + currentRecordIndex, SeekOrigin.Begin);
-				FileStream.Read(bytedata, 0, bytedata.Length);
-				Bitmap image = new Bitmap(db9.Image_width, db9.Image_hight);
-				int i = 0;
-				string Lable = null;
-				string Lable_Clean = null;
-
-				byte[] labelByte = new byte[db9.Lablesizeinbytes];
-				//ofsett to read lable 
-				FileStream.Seek(db9.Lableoffset + currentRecordIndex, SeekOrigin.Begin);
-				FileStream.Read(labelByte, 0, labelByte.Length);
-				//Lable = System.Text.Encoding.ASCII.GetString(labelByte).Trim();
-				Lable = db9.getLable(labelByte);
-				Lable_Clean = CleanFileName(Lable);
-
-				for (int y = 0; y < db9.Image_hight; y++)
-				{
-					for (int x = 0; x < db9.Image_width; x += 2)
-					{
-
-						var byteNibbles = ConvertByteToNibbles(bytedata[i]);
-						// we multiply by 16 because the colour deaps in the package is 16 and bitmap is 256 per channel  256 /16 = 16
-						int lowNibble = white - (byteNibbles.lowNibble * db9.ColourLevels);
-						//high nibble
-						int highNibble = white - (byteNibbles.highNibble * db9.ColourLevels);
-						Color currentColour = Color.FromArgb(lowNibble, lowNibble, lowNibble);
-						image.SetPixel(x, y, currentColour);
-
-						currentColour = Color.FromArgb(highNibble, highNibble, highNibble);
-						image.SetPixel(x + 1, y, currentColour);
-						i++;
-					}
-				}
-
-				image.Save("img/"+ Lable_Clean + "Record- " + recordCount + ".jpg", ImageFormat.Jpeg);
-			}
 
 		}
 
@@ -163,3 +197,4 @@ namespace openfile
 
 	}
 }
+	
