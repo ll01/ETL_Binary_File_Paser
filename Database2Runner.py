@@ -16,11 +16,11 @@ for c in co59l:
     co = ch[1].split(',')
     CO59[(int(co[0]),int(co[1]))] = ch[0]
  
-filename = 'ETL2_2'
+filename = 'ETL2_3'
 #skip = 0
  
 f = bitstring.ConstBitStream(filename=filename)
-for skip in range(10480):
+for skip in range(11360):
     f.pos = skip * 6 * 3660
     r = f.readlist('int:36,uint:6,pad:30,6*uint:6,6*uint:6,pad:24,2*uint:6,pad:180,bytes:2700') 
     print(r[0], T56(r[1]), "".join(map(T56, r[2:8])), "".join(map(T56, r[8:14])), CO59[tuple(r[14:16])])
