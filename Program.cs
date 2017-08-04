@@ -47,6 +47,7 @@ namespace openfile
 			public DataBaseSettings(int offsetinbytes, int recordsizeinbytes, int image_width, int image_hight,
 									int metadataoffset, int lableoffset, int lablesizeinbytes, Encoding labelencoding, int colourdepthinbits)
 			{
+
 				m_offsetinbytes = offsetinbytes;
 				m_recordsizeinbytes = recordsizeinbytes;
 				m_image_width = image_width;
@@ -114,13 +115,15 @@ namespace openfile
 						Lable = getLable(labelByte);
 						Lable_Clean = CleanFileName(Lable);
 						int colourChunk = 8 / m_colourdepthinbits;
-
 						
+
+
+
 						for (int y = 0; y < image.Height; y++)
 						{
-							for (int x = 0; x < image.Width; x += colourChunk )
+							for (int x = 0; x < image.Width; x += colourChunk)
 							{
-								var arrayindex = ((x + y) + ((image.Width  -1) * y) ) / colourChunk;
+								var arrayindex = ((x + y) + ((image.Width - 1) * y)) / colourChunk;
 								var individualColourValuelist = ConvertByteToNibbles(bytedata[arrayindex], m_colourdepthinbits);
 								for (int j = 0; j < individualColourValuelist.Length; j++)
 								{
@@ -129,7 +132,7 @@ namespace openfile
 									image.SetPixel(x + j, y, currentColour);
 
 								}
-								
+
 
 							}
 							//Console.WriteLine(y);
@@ -171,8 +174,7 @@ namespace openfile
 			//Encoding lableJISEncoder = Encoding.GetEncoding("EUC-JP");
 
 			//var db9 = new DataBaseSettings(7, 8192, 128, 127, 64, 2, 2, Encoding.GetEncoding("EUC-JP"), 4);
-			const int white = 255;
-
+			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 			//db9.ExtractDataset(@"D:\Datasets\ETL9G", @"D:\Datasets\ETL8B", true).Wait();
 			var Data = new DataBaseSettings(0, 512, 64, 63, 8, 2, 2, Encoding.GetEncoding("EUC-JP"), 1);
 			Data.ExtractDataset(@"D:\Datasets\ETL8B", @"D:\Datasets\ETL8B", false).Wait();
